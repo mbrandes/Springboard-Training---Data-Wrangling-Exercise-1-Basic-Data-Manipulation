@@ -1,0 +1,55 @@
+---
+title: "Refine"
+author: "Mark Brandes"
+date: "December 20, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Needed libraries
+
+library(readr)
+library(dplyr)
+library(tidyr)
+
+## 0: Load the data in RStudio
+
+refine_original <- read_csv("~/Springboard Training/refine_original.csv")
+refine_original <- arrange(refine_original,company)
+
+## 1: Clean up brand names
+
+refine_original$company <- gsub("fillips|[Pp]hillip[Ss]|[Pp]hillp[Ss]|[Pp]hlip[Ss]|phllips","philips",refine_original$company)
+refine_original$company <- gsub("ak zo|[Aa]kz[oO0]|AKZO","akzo",refine_original$company)
+refine_original$company <- gsub("Unilever|unilver","unilever",refine_original$company)
+refine_original$company <- gsub("[Vv]an [Hh]outen","van houten",refine_original$company)
+
+## 2: Separate product code and number
+
+refine_original <- separate(refine_original,`Product code / number`,c("product_code","product_number"), sep="-")
+
+## 3: Add product categories 
+
+product_code <- c("q","p","v","x")
+category <- c("smartphone","tv","laptop","tablet")
+codetranslater <- data.frame(product_code,category)
+refine_original <- left_join(refine_original,codetranslater,by="product_code")
+refine_original$product_code <- refine_original$category
+refine_original <- select(refine_original, -category)
+
+## 4: Add full address for geocoding
+
+refine_original <- unite(refine_original,full_address,address,city,country,sep=", ")
+
+## 5: Create dummy variables for company and product category
+
+refine_original <- mutate(refine_original,company_akzo = ifelse(company == "akzo", 1, 0), company_philips = ifelse(company == "philips", 1,0), company_unilever = ifelse(company == "unilever",1,0), company_van_houten = ifelse(company == "van houten", 1,0))
+refine_original <- mutate(refine_original,product_smartphone = ifelse(product_code == "smartphone",1,0), product_tablet = ifelse(product_code == "tablet",1,0), product_tv = ifelse(product_code == "tv",1,0), product_laptop = ifelse(product_code == "laptop",1,0))
+
+## Print out clean data
+
+refine_clean <- refine_original
+write.csv(refine_clean, file = "refine_clean.csv")
